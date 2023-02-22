@@ -1,0 +1,8 @@
+name: AirshipCraftCombat
+version: '${project.version}'
+main: tk.airshipcraft.airshipcraftcombat.Main
+api-version: 1.19
+load: STARTUP
+authors: [ Locutusque ]
+description: AirshipCraft's combat mechanics
+website: https://github.com/AirshipCraft/combat
