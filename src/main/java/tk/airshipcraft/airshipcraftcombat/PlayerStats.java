@@ -1,6 +1,6 @@
 package tk.airshipcraft.airshipcraftcombat;
 
-import jdk.nashorn.internal.runtime.regexp.joni.exception.ValueException;
+
 import org.bukkit.entity.LivingEntity;
 
 import java.util.HashMap;
@@ -44,10 +44,14 @@ public class PlayerStats {
         if (healthMap.containsKey(playerUUID)) {
             return healthMap.get(playerUUID);
         } else {
-
-            throw new ValueException("Health not found for player " + playerUUID.getName());
+            System.out.println("Health not found for player " + playerUUID.getName());
+            System.out.println("Putting new health for player" + playerUUID.getName());
+            healthMap.put(playerUUID, 100.0);
+            return 100.0;
         }
     }
+
+
 
     public double getMaxHealth(LivingEntity entity) {
         return maxHealthMap.getOrDefault(entity, defaultMaxHealth);
