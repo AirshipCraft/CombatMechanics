@@ -19,6 +19,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.entity.EntityType;
+import org.bukkit.Location;
+import org.bukkit.World;
 
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +44,7 @@ public class DamageListener implements Listener {
             }
         }
     };
+
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
@@ -50,82 +54,99 @@ public class DamageListener implements Listener {
         player.sendMessage(ChatColor.GREEN + "Your stats have successfully loaded!");
     }
 
-
     @EventHandler
     public void onEntitySpawn(EntitySpawnEvent event) {
-            if (event.getEntity() instanceof ArmorStand) {}
-                if (event.getEntity() instanceof Player) {
-                } else {
-                    if (event.getEntity() instanceof LivingEntity) {
-                        LivingEntity entity = (LivingEntity) event.getEntity();
-                        PlayerStats stats = new PlayerStats(100, 10, 5, 2, 5, 1, 100);
-                        entityStats.put(entity, stats);
-                        for (LivingEntity entity2 : entityStats.keySet()) {
-                            PlayerStats stats2 = entityStats.get(entity2);
-                            double health = stats2.getHealth(entity);
-                            double maxHealth = stats2.getMaxHealth(entity);
-                            double percentage = health / maxHealth * 100.0;
-                            String message = String.format(ChatColor.RED + "Health: %.1f / %.1f (%.0f%%)", health, maxHealth, percentage);
-                            entity2.setCustomName(message);
-                            entity2.setCustomNameVisible(true);
+        if (!(event.getEntity() instanceof Player)) {
+            if (event.getEntity() instanceof LivingEntity) {
+                if (!(event.getEntity() instanceof ArmorStand)) {
+                    LivingEntity entity = (LivingEntity) event.getEntity();
+                    PlayerStats stats = new PlayerStats(100, 10, 5, 2, 5, 1, 100);
+                    entityStats.put(entity, stats);
+                    for (LivingEntity entity2 : entityStats.keySet()) {
+                        PlayerStats stats2 = entityStats.get(entity2);
+                        double health = stats2.getHealth(entity);
+                        double maxHealth = stats2.getMaxHealth(entity);
+                        double percentage = health / maxHealth * 100.0;
+                        String message = String.format(ChatColor.RED + "Health: %.1f / %.1f (%.0f%%)", health, maxHealth, percentage);
+                        entity2.setCustomName(message);
+                        entity2.setCustomNameVisible(true);
                     }
                 }
             }
         }
+    }
+
+
     @EventHandler
-    public void onEntityDamage(EntityDamageEvent event) {
+    public void onEntityDamage(EntityDamageByEntityEvent event) {
+        event.setDamage(0.0);
+        Entity damager = event.getDamager();
+        if (!(damager instanceof LivingEntity)) {
+            return;
+        }
+        LivingEntity attacker = (LivingEntity) damager;
         if (!(event.getEntity() instanceof LivingEntity)) {
             return;
         }
-        LivingEntity entity = (LivingEntity) event.getEntity();
-        double health = entity.getHealth();
+        LivingEntity victim = (LivingEntity) event.getEntity();
 
+        PlayerStats victimStats = entityStats.get(victim);
+        PlayerStats attackerStats = null;
 
-        PlayerStats victimStats = entityStats.get(entity);
-        PlayerStats damagerStats = null;
-        double damageTaken = entity.getLastDamage();
-        Entity damager = null;
-        ItemStack weapon = null;
-        ItemStack[] armor = null;
-
-        if (event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK) {
-            damager = ((EntityDamageByEntityEvent) event).getDamager();
-            if (damager instanceof Player) {
-                damagerStats = entityStats.get(damager);
-                Player playerDamager = (Player) damager;
-                weapon = playerDamager.getInventory().getItemInMainHand();
-                armor = playerDamager.getInventory().getArmorContents();
-            } else {
-                damagerStats = entityStats.get(damager);
+        if (attacker instanceof Player) {
+            attackerStats = entityStats.get(attacker);
+            Player playerAttacker = (Player) attacker;
+            ItemStack weapon = playerAttacker.getInventory().getItemInMainHand();
+            ItemStack[] armor = playerAttacker.getInventory().getArmorContents();
+            try {
+                double damage = calculateDamage(attackerStats, weapon, armor, victim);
+                dealCustomDamage(damage, victim);
+                showDamageIndicator(victim, damage);
+            } catch (Exception e) {
+                throw new RuntimeException(playerAttacker + "'s stats don't exist, please tell them to relog");
+            }
+        } else {
+            attackerStats = entityStats.get(attacker);
+            try {
+                double damage = calculateDamage(attackerStats, null, null, victim);
+                dealCustomDamage(damage, victim);
+            } catch (Exception e) {
+                throw new RuntimeException(attacker + "'s stats don't exist, please tell them to relog");
             }
         }
-        UUID uuid = entity.getUniqueId();
-        double customHealth = victimStats.getHealth(entity);
-        double maxHealth = victimStats.getMaxHealth(entity);
 
-        try {
-            double damage = calculateDamage(damagerStats, weapon, armor, entity);
-            dealCustomDamage(damage, entity);
-        } catch(Exception e) {
-            throw new RuntimeException(damager + "'s stats don't exist, please tell him to relog");
-        }
-
+        double customHealth = victimStats.getHealth(victim);
+        double maxHealth = victimStats.getMaxHealth(victim);
         if (customHealth <= 0) {
-            entity.setHealth(0);
-        }
-
-        if (damageTaken >= health) {
-            event.setCancelled(true);
+            victim.setHealth(0);
         }
 
         for (LivingEntity entityKey : entityStats.keySet()) {
-            double percentage = customHealth / maxHealth * 100.0;
-            String message = String.format(ChatColor.RED + "Health: %.1f / %.1f (%.0f%%)", customHealth, maxHealth, percentage);
-            entityKey.setCustomName(message);
-            entityKey.setCustomNameVisible(true);
+            if (!(victim instanceof ArmorStand)) {
+                double percentage = customHealth / maxHealth * 100.0;
+                String message = String.format(ChatColor.RED + "Health: %.1f / %.1f (%.0f%%)", customHealth, maxHealth, percentage);
+                entityKey.setCustomName(message);
+                entityKey.setCustomNameVisible(true);
+            }
         }
     }
-    public double calculateDamage(PlayerStats stats, ItemStack weapon, ItemStack[] armor, LivingEntity entity) {
+    public void showDamageIndicator(LivingEntity entity, double damage) {
+        Location loc = entity.getLocation();
+        loc.add(0, entity.getHeight(), 0);
+        ArmorStand as = loc.getWorld().spawn(loc, ArmorStand.class);
+        as.setVisible(false);
+        as.setGravity(false);
+        as.setCanPickupItems(false);
+        as.setMarker(true);
+        as.setCustomNameVisible(true);
+        as.setCustomName("-" + String.format("%.1f", damage));
+        as.setRemoveWhenFarAway(false);
+        Bukkit.getScheduler().runTaskLater((Plugin) this, () -> {
+            as.remove();
+        }, 20L);
+    }
+
+        public double calculateDamage(PlayerStats stats, ItemStack weapon, ItemStack[] armor, LivingEntity entity) {
         UUID uuid = entity.getUniqueId();
         double baseDamage = stats.getBaseDamage(entity);
         if (weapon != null && weapon.getType() != Material.AIR) {
