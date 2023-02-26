@@ -5,10 +5,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -19,7 +16,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.entity.EntityType;
 import org.bukkit.Location;
 import org.bukkit.World;
 
@@ -60,7 +56,7 @@ public class DamageListener implements Listener {
             if (event.getEntity() instanceof LivingEntity) {
                 if (!(event.getEntity() instanceof ArmorStand)) {
                     LivingEntity entity = (LivingEntity) event.getEntity();
-                    PlayerStats stats = new PlayerStats(100, 10, 5, 2, 5, 1, 100);
+                    PlayerStats stats = new PlayerStats(100.0, 10.0, 0.2, 2.0, 5.0, 1.0, 100.0);
                     entityStats.put(entity, stats);
                     for (LivingEntity entity2 : entityStats.keySet()) {
                         PlayerStats stats2 = entityStats.get(entity2);
@@ -75,10 +71,19 @@ public class DamageListener implements Listener {
             }
         }
     }
+    @EventHandler
+    public void OnEntityDamage(EntityDamageEvent event) {
+        if (!(event instanceof EntityDamageByEntityEvent)) {
+            double damage = event.getDamage();
+            LivingEntity victim = (LivingEntity) event.getEntity();
+            event.setDamage(0.0);
+            dealCustomDamage(damage, victim);
 
+        }
+    }
 
     @EventHandler
-    public void onEntityDamage(EntityDamageByEntityEvent event) {
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         event.setDamage(0.0);
         Entity damager = event.getDamager();
         if (!(damager instanceof LivingEntity)) {
@@ -98,22 +103,27 @@ public class DamageListener implements Listener {
             Player playerAttacker = (Player) attacker;
             ItemStack weapon = playerAttacker.getInventory().getItemInMainHand();
             ItemStack[] armor = playerAttacker.getInventory().getArmorContents();
+
             try {
                 double damage = calculateDamage(attackerStats, weapon, armor, victim);
                 dealCustomDamage(damage, victim);
-                showDamageIndicator(victim, damage);
             } catch (Exception e) {
                 throw new RuntimeException(playerAttacker + "'s stats don't exist, please tell them to relog");
             }
+        } else if (attacker instanceof Arrow) {
+            Arrow arrow = (Arrow) attacker;
+            Entity shooter = (LivingEntity) arrow.getShooter();
+            attackerStats = entityStats.get(shooter);
         } else {
             attackerStats = entityStats.get(attacker);
+        }
             try {
                 double damage = calculateDamage(attackerStats, null, null, victim);
                 dealCustomDamage(damage, victim);
             } catch (Exception e) {
                 throw new RuntimeException(attacker + "'s stats don't exist, please tell them to relog");
             }
-        }
+
 
         double customHealth = victimStats.getHealth(victim);
         double maxHealth = victimStats.getMaxHealth(victim);
@@ -139,6 +149,7 @@ public class DamageListener implements Listener {
         as.setCanPickupItems(false);
         as.setMarker(true);
         as.setCustomNameVisible(true);
+        as.setInvulnerable(true);
         as.setCustomName("-" + String.format("%.1f", damage));
         as.setRemoveWhenFarAway(false);
         Bukkit.getScheduler().runTaskLater((Plugin) this, () -> {
@@ -146,16 +157,16 @@ public class DamageListener implements Listener {
         }, 20L);
     }
 
-        public double calculateDamage(PlayerStats stats, ItemStack weapon, ItemStack[] armor, LivingEntity entity) {
+    public double calculateDamage(PlayerStats stats, ItemStack weapon, ItemStack[] armor, LivingEntity entity) {
         UUID uuid = entity.getUniqueId();
         double baseDamage = stats.getBaseDamage(entity);
-        if (weapon != null && weapon.getType() != Material.AIR) {
+        if (weapon != null) {
             ItemMeta weaponMeta = weapon.getItemMeta();
             if (weaponMeta.hasLore()) {
                 List<String> lore = weaponMeta.getLore();
                 for (String line : lore) {
                     if (line.contains(ChatColor.stripColor("Damage:"))) {
-                        String damageStr = line.split(":")[1].trim();
+                        String damageStr = ChatColor.stripColor(line).split(":")[1].trim();
                         double weaponDamage = Double.parseDouble(damageStr);
                         baseDamage += weaponDamage;
                     }
@@ -164,13 +175,13 @@ public class DamageListener implements Listener {
         }
         double damage = baseDamage;
         double strength = stats.getStrength(entity);
-        if (weapon != null && weapon.getType() != Material.AIR) {
+        if (weapon != null) {
             ItemMeta weaponMeta = weapon.getItemMeta();
             if (weaponMeta.hasLore()) {
                 List<String> lore = weaponMeta.getLore();
                 for (String line : lore) {
                     if (line.contains(ChatColor.stripColor("Strength:"))) {
-                        String damageStr = line.split(":")[1].trim();
+                        String damageStr = ChatColor.stripColor(line).split(":")[1].trim();
                         strength += Double.parseDouble(damageStr);
                         damage *= strength;
                     }
@@ -179,16 +190,16 @@ public class DamageListener implements Listener {
         }
         double critChance = stats.getCritChance(entity);
         double critDamage = stats.getCritDamage(entity);
-        if (weapon != null && weapon.getType() != Material.AIR) {
+        if (weapon != null) {
             ItemMeta weaponMeta = weapon.getItemMeta();
             if (weaponMeta.hasLore()) {
                 List<String> lore = weaponMeta.getLore();
                 for (String line : lore) {
                     if (line.contains(ChatColor.stripColor("Crit Chance:"))) {
-                        String critChanceStr = line.split(":")[1].trim();
+                        String critChanceStr = ChatColor.stripColor(line).split(":")[1].trim();
                         critChance += Double.parseDouble(critChanceStr);
                     } else if (line.contains(ChatColor.stripColor("Crit Damage:"))) {
-                        String critDamageStr = line.split(":")[1].trim();
+                        String critDamageStr = ChatColor.stripColor(line).split(":")[1].trim();
                         critDamage += Double.parseDouble(critDamageStr);
                     }
                 }
