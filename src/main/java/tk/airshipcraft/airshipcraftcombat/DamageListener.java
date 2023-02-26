@@ -26,7 +26,7 @@ import java.util.UUID;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DamageListener implements Listener {
+public class DamageListener implements Listener, DamageListenerInterface {
 
     public Map<LivingEntity, PlayerStats> entityStats = new HashMap<>();
     private final BukkitRunnable actionBarTask = new BukkitRunnable() {
@@ -258,11 +258,4 @@ public class DamageListener implements Listener {
         }
     }
 
-    public void setEntityStats(Entity entity, PlayerStats stats) {
-        entityStats.put((LivingEntity) entity, stats);
-    }
-
-    public PlayerStats getEntityStats(Entity entity) {
-        return entityStats.get(entity);
-    }
 }
