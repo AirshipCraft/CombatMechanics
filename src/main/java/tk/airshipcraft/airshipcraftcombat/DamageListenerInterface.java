@@ -16,3 +16,4 @@ public interface DamageListenerInterface {
         return entityStats.get(entity);
     }
 }
+// This currently does not work!
