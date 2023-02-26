@@ -18,6 +18,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
+import org.bukkit.event.entity.ProjectileHitEvent;
 
 import java.util.List;
 import java.util.UUID;
@@ -72,13 +74,60 @@ public class DamageListener implements Listener {
         }
     }
     @EventHandler
-    public void OnEntityDamage(EntityDamageEvent event) {
-        if (!(event instanceof EntityDamageByEntityEvent)) {
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (event instanceof EntityDamageByEntityEvent) {
+        } else {
             double damage = event.getDamage();
             LivingEntity victim = (LivingEntity) event.getEntity();
             event.setDamage(0.0);
             dealCustomDamage(damage, victim);
+            showDamageIndicator(victim, damage);
+            if (entityStats.get(victim) == null) {
+                PlayerStats playerStats = new PlayerStats(100.0, 10.0, 0.2, 2.0, 5.0, 1.0, 100.0);
+                entityStats.put(victim, playerStats);
+            }
 
+        }
+    }
+    public void showDamageIndicator(LivingEntity entity, double damage) {
+        Location loc = entity.getLocation();
+        loc.add(0, entity.getHeight(), 0);
+        ArmorStand as = loc.getWorld().spawn(loc, ArmorStand.class);
+        as.setVisible(false);
+        as.setGravity(false);
+        as.setCanPickupItems(false);
+        as.setMarker(true);
+        as.setCustomNameVisible(true);
+        as.setInvulnerable(true);
+        as.setCustomName("-" + String.format("%.1f", damage));
+        as.setRemoveWhenFarAway(true);
+        Bukkit.getScheduler().runTaskLater(Main.getPlugin(Main.class), new Runnable() {
+            @Override
+            public void run() {
+                as.remove();
+            }
+        }, 20L);
+    }
+
+        @EventHandler
+    public void onProjectileHit(ProjectileHitEvent event) {
+        Projectile projectile = event.getEntity();
+        LivingEntity shooter = (LivingEntity) projectile.getShooter();
+        double damage;
+        if (shooter instanceof Player) {
+            Player player = (Player) shooter;
+            ItemStack weapon = player.getInventory().getItemInMainHand();
+            damage = calculateDamage(entityStats.get(player), weapon, null, player);
+        } else {
+
+            LivingEntity livingShooter = (LivingEntity) shooter;
+            damage = calculateDamage(entityStats.get(livingShooter), null, null, livingShooter);
+        }
+        Entity hitEntity = event.getHitEntity();
+        if (hitEntity instanceof LivingEntity) {
+            LivingEntity victim = (LivingEntity) hitEntity;
+            dealCustomDamage(damage, victim);
+            showDamageIndicator(victim, damage);
         }
     }
 
@@ -90,13 +139,15 @@ public class DamageListener implements Listener {
             return;
         }
         LivingEntity attacker = (LivingEntity) damager;
-        if (!(event.getEntity() instanceof LivingEntity)) {
-            return;
-        }
+
         LivingEntity victim = (LivingEntity) event.getEntity();
 
         PlayerStats victimStats = entityStats.get(victim);
         PlayerStats attackerStats = null;
+        if (entityStats.get(victim) == null) {
+            PlayerStats playerStats = new PlayerStats(100.0, 10.0, 0.2, 2.0, 5.0, 1.0, 100.0);
+            entityStats.put(victim, playerStats);
+        }
 
         if (attacker instanceof Player) {
             attackerStats = entityStats.get(attacker);
@@ -107,23 +158,21 @@ public class DamageListener implements Listener {
             try {
                 double damage = calculateDamage(attackerStats, weapon, armor, victim);
                 dealCustomDamage(damage, victim);
+                showDamageIndicator(victim, damage);
             } catch (Exception e) {
-                throw new RuntimeException(playerAttacker + "'s stats don't exist, please tell them to relog");
+
             }
-        } else if (attacker instanceof Arrow) {
-            Arrow arrow = (Arrow) attacker;
-            Entity shooter = (LivingEntity) arrow.getShooter();
-            attackerStats = entityStats.get(shooter);
         } else {
             attackerStats = entityStats.get(attacker);
-        }
+
             try {
                 double damage = calculateDamage(attackerStats, null, null, victim);
                 dealCustomDamage(damage, victim);
+                showDamageIndicator(victim, damage);
             } catch (Exception e) {
-                throw new RuntimeException(attacker + "'s stats don't exist, please tell them to relog");
-            }
 
+            }
+        }
 
         double customHealth = victimStats.getHealth(victim);
         double maxHealth = victimStats.getMaxHealth(victim);
@@ -140,22 +189,7 @@ public class DamageListener implements Listener {
             }
         }
     }
-    public void showDamageIndicator(LivingEntity entity, double damage) {
-        Location loc = entity.getLocation();
-        loc.add(0, entity.getHeight(), 0);
-        ArmorStand as = loc.getWorld().spawn(loc, ArmorStand.class);
-        as.setVisible(false);
-        as.setGravity(false);
-        as.setCanPickupItems(false);
-        as.setMarker(true);
-        as.setCustomNameVisible(true);
-        as.setInvulnerable(true);
-        as.setCustomName("-" + String.format("%.1f", damage));
-        as.setRemoveWhenFarAway(false);
-        Bukkit.getScheduler().runTaskLater((Plugin) this, () -> {
-            as.remove();
-        }, 20L);
-    }
+
 
     public double calculateDamage(PlayerStats stats, ItemStack weapon, ItemStack[] armor, LivingEntity entity) {
         UUID uuid = entity.getUniqueId();
@@ -208,7 +242,6 @@ public class DamageListener implements Listener {
         if (Math.random() < critChance) {
             damage *= critDamage;
         }
-        System.out.println(damage);
         return damage;
     }
 
