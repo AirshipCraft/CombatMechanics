@@ -1,27 +1,20 @@
 package tk.airshipcraft.airshipcraftcombat;
-
-
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.LivingEntity;
 
 import java.util.HashMap;
+import java.util.UUID;
 
 public class PlayerStats {
-    private double defaultHealth;
-    private double defaultStrength;
-    private double defaultCritChance;
-    private double defaultCritDamage;
-    private double defaultDefense;
-    private double defaultBaseDamage;
-    private double defaultMaxHealth;
 
-    private HashMap<LivingEntity, Double> healthMap;
-    private HashMap<LivingEntity, Double> strengthMap;
-    private HashMap<LivingEntity, Double> critChanceMap;
-    private HashMap<LivingEntity, Double> critDamageMap;
-    private HashMap<LivingEntity, Double> defenseMap;
-    private HashMap<LivingEntity, Double> baseDamageMap;
-    private HashMap<LivingEntity, Double> maxHealthMap;
+
+    private HashMap<UUID, Double> healthMap;
+    private HashMap<UUID, Double> strengthMap;
+    private HashMap<UUID, Double> critChanceMap;
+    private HashMap<UUID, Double> critDamageMap;
+    private HashMap<UUID, Double> defenseMap;
+    private HashMap<UUID, Double> baseDamageMap;
+    private HashMap<UUID, Double> maxHealthMap;
 
     public PlayerStats(double health, double strength, double critChance, double critDamage, double defense, double baseDamage, double maxHealth) {
         this.healthMap = new HashMap<>();
@@ -31,23 +24,16 @@ public class PlayerStats {
         this.defenseMap = new HashMap<>();
         this.baseDamageMap = new HashMap<>();
         this.maxHealthMap = new HashMap<>();
-
-        this.defaultHealth = health;
-        this.defaultStrength = strength;
-        this.defaultCritChance = critChance;
-        this.defaultCritDamage = critDamage;
-        this.defaultDefense = defense;
-        this.defaultBaseDamage = baseDamage;
-        this.defaultMaxHealth = maxHealth;
     }
 
-    public double getHealth(LivingEntity playerUUID) {
-        if (healthMap.containsKey(playerUUID)) {
-            return healthMap.get(playerUUID);
+    public double getHealth(LivingEntity entity) {
+        UUID uuid = entity.getUniqueId();
+        if (healthMap.containsKey(uuid)) {
+            return healthMap.get(uuid);
         } else {
-            if (!(playerUUID instanceof ArmorStand)) {
-                healthMap.put(playerUUID, 100.0);
-                return healthMap.get(playerUUID);
+            if (!(entity instanceof ArmorStand)) {
+                healthMap.put(uuid, 100.0);
+                return healthMap.get(uuid);
             }
         }
         return 0.0;
@@ -55,102 +41,114 @@ public class PlayerStats {
 
 
     public double getMaxHealth(LivingEntity entity) {
-
-        if (maxHealthMap.containsKey(entity)) {
-            return maxHealthMap.get(entity);
+        UUID uuid = entity.getUniqueId();
+        if (maxHealthMap.containsKey(uuid)) {
+            return maxHealthMap.get(uuid);
 
         } else {
             if (!(entity instanceof ArmorStand)) {
-                maxHealthMap.put(entity, 100.0);
-                return maxHealthMap.get(entity);
+                maxHealthMap.put(uuid, 100.0);
+                return maxHealthMap.get(uuid);
             }
         }
         return 0.0;
     }
 
     public double getBaseDamage(LivingEntity entity) {
-        if (baseDamageMap.containsKey(entity)) {
-            return baseDamageMap.get(entity);
+        UUID uuid = entity.getUniqueId();
+        if (baseDamageMap.containsKey(uuid)) {
+            return baseDamageMap.get(uuid);
 
         }else {
             if (!(entity instanceof ArmorStand)) {
-                baseDamageMap.put(entity, 1.0);
-                return baseDamageMap.get(entity);
+                baseDamageMap.put(uuid, 1.0);
+                return baseDamageMap.get(uuid);
             }
         }
         return 0.0;
     }
 
     public void setCustomHealth(double health, LivingEntity entity) {
-        healthMap.put(entity, health);
+        UUID uuid = entity.getUniqueId();
+        healthMap.put(uuid, health);
     }
 
     public void setCustomStrength(double strength, LivingEntity entity) {
-        strengthMap.put(entity, strength);
+        UUID uuid = entity.getUniqueId();
+        strengthMap.put(uuid, strength);
     }
 
     public void setCustomCritChance(double critChance, LivingEntity entity) {
-        critChanceMap.put(entity, critChance);
+        UUID uuid = entity.getUniqueId();
+        critChanceMap.put(uuid, critChance);
     }
 
     public void setCustomCritDamage(double critDamage, LivingEntity entity) {
-        critDamageMap.put(entity, critDamage);
+        UUID uuid = entity.getUniqueId();
+        critDamageMap.put(uuid, critDamage);
     }
 
     public void setCustomDefense(double defense, LivingEntity entity) {
-        defenseMap.put(entity, defense);
+        UUID uuid = entity.getUniqueId();
+        defenseMap.put(uuid, defense);
     }
 
     public void setCustomBaseDamage(double baseDamage, LivingEntity entity) {
-        baseDamageMap.put(entity, baseDamage);
+        UUID uuid = entity.getUniqueId();
+        baseDamageMap.put(uuid, baseDamage);
     }
 
     public void setCustomMaxHealth(double maxHealth, LivingEntity entity) {
-        maxHealthMap.put(entity, maxHealth);
+        UUID uuid = entity.getUniqueId();
+        maxHealthMap.put(uuid, maxHealth);
     }
 
     public double getStrength(LivingEntity entity) {
-        if (strengthMap.containsKey(entity)) {
-            return strengthMap.get(entity);
+        UUID uuid = entity.getUniqueId();
+        if (strengthMap.containsKey(uuid)) {
+            return strengthMap.get(uuid);
 
         }else{
             if (!(entity instanceof ArmorStand)) {
-                strengthMap.put(entity, 10.0);
-                return strengthMap.get(entity);
+                strengthMap.put(uuid, 10.0);
+                return strengthMap.get(uuid);
             }
         }return 0.0;
     }
 
     public double getCritChance(LivingEntity entity) {
-        if (critChanceMap.containsKey(entity)) {
-            return critChanceMap.get(entity);
+        UUID uuid = entity.getUniqueId();
+        if (critChanceMap.containsKey(uuid)) {
+            return critChanceMap.get(uuid);
         } else {
             if (!(entity instanceof ArmorStand)) {
-                critChanceMap.put(entity, 0.2);
-                return critChanceMap.get(entity);
+                critChanceMap.put(uuid, 0.2);
+                return critChanceMap.get(uuid);
             }
         }return 0.0;
     }
 
     public double getCritDamage(LivingEntity entity) {
-        if (critDamageMap.containsKey(entity)) {
-            return critDamageMap.get(entity);
-            
+        UUID uuid = entity.getUniqueId();
+        if (critDamageMap.containsKey(uuid)) {
+            return critDamageMap.get(uuid);
+
         }else{
             if (!(entity instanceof ArmorStand)) {
-                critDamageMap.put(entity, 2.0);
-                return critDamageMap.get(entity);
+                critDamageMap.put(uuid, 2.0);
+                return critDamageMap.get(uuid);
             }
         }return 0.0;
     }
 
     public double getDefense(LivingEntity entity) {
-        if (defenseMap.containsKey(entity)) {
-            return defenseMap.get(entity);
+        UUID uuid = entity.getUniqueId();
+        if (defenseMap.containsKey(uuid)) {
+            return defenseMap.get(uuid);
         }else{
             if (!(entity instanceof ArmorStand)) {
-                defenseMap.put(entity, 0.0);
-                return defenseMap.get(entity);
+                defenseMap.put(uuid, 0.0);
+                return defenseMap.get(uuid);
             }
         }return 0.0;
     }
