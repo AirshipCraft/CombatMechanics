@@ -24,7 +24,7 @@ import java.util.Map;
 
 public class DamageListener implements Listener {
 
-    public Map<LivingEntity, PlayerStats> entityStats = new HashMap<>();
+    public static Map<LivingEntity, PlayerStats> entityStats = new HashMap<>();
     private final BukkitRunnable actionBarTask = new BukkitRunnable() {
         @Override
         public void run() {
