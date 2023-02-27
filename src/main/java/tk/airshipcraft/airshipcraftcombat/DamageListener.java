@@ -254,10 +254,10 @@ public class DamageListener implements Listener {
         }
     }
 
-    public PlayerStats getEntityStats(LivingEntity entity) {
+    public static PlayerStats getEntityStats(LivingEntity entity) {
         return entityStats.get(entity);
     }
-    public void setEntityStats(LivingEntity entity, PlayerStats stats) {
+    public static void setEntityStats(LivingEntity entity, PlayerStats stats) {
         entityStats.put(entity, stats);
     }
 }
