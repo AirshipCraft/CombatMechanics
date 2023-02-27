@@ -4,7 +4,6 @@ import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,11 +13,8 @@ import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.ProjectileHitEvent;
 
 import java.util.List;
@@ -26,7 +22,7 @@ import java.util.UUID;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DamageListener implements Listener, DamageListenerInterface {
+public class DamageListener implements Listener {
 
     public Map<LivingEntity, PlayerStats> entityStats = new HashMap<>();
     private final BukkitRunnable actionBarTask = new BukkitRunnable() {
@@ -258,4 +254,10 @@ public class DamageListener implements Listener, DamageListenerInterface {
         }
     }
 
+    public PlayerStats getEntityStats(LivingEntity entity) {
+        return entityStats.get(entity);
+    }
+    public void setEntityStats(LivingEntity entity, PlayerStats stats) {
+        entityStats.put(entity, stats);
+    }
 }
