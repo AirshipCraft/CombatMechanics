@@ -18,6 +18,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.Location;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 
 import java.util.List;
 import java.util.UUID;
@@ -35,8 +36,9 @@ public class DamageListener implements Listener {
                 PlayerStats playerStats = entityStats.get(uuid);
                 double health = playerStats.getHealth(player);
                 double maxHealth = playerStats.getMaxHealth(player);
+                double defense = playerStats.getDefense(player);
                 double percentage = health / maxHealth * 100.0;
-                String message = String.format("Health: %.1f / %.1f (%.0f%%)", health, maxHealth, percentage);
+                String message = String.format(ChatColor.RED + "Health: %.1f / %.1f (%.0f%%)" + ChatColor.GREEN + " Defense: %.1f", health, maxHealth, percentage, defense);
                 player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
             }
         }
@@ -140,7 +142,10 @@ public class DamageListener implements Listener {
             showDamageIndicator(victim, damage);
         }
     }
-
+    @EventHandler
+    public void onPlayerSwapHandItems(PlayerSwapHandItemsEvent event) {
+        event.setCancelled(true);
+    }
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         event.setDamage(0.0);
@@ -253,23 +258,28 @@ public class DamageListener implements Listener {
         if (Math.random() < critChance) {
             damage *= critDamage;
         }
+        double defense = stats.getDefense(entity);
+        damage = damage / defense;
         return damage;
-    }
+        }
 
 
     public static void dealCustomDamage(double damage, LivingEntity victim) {
         UUID victimKey = victim.getUniqueId();
-        double customHealth = entityStats.get(victimKey).getHealth(victim);
-        PlayerStats stats = entityStats.get(victimKey);
-        double finalDamage = damage;
-        customHealth -= finalDamage;
-        stats.setCustomHealth(customHealth, victim);
-        if (customHealth <= 0) {
-            entityStats.remove(victimKey);
-            victim.setHealth(0);
+        if (entityStats.containsKey(victimKey)) {
+            double customHealth = entityStats.get(victimKey).getHealth(victim);
+            PlayerStats stats = entityStats.get(victimKey);
+            double finalDamage = damage;
+            customHealth -= finalDamage;
+            stats.setCustomHealth(customHealth, victim);
+            if (customHealth <= 0) {
+                entityStats.remove(victimKey);
+                victim.setHealth(0);
+            }
+        } else {
+            System.out.println("Error: " + victim + "'s stats don't exist");
         }
     }
-
     public static PlayerStats getEntityStats(LivingEntity entity) {
         UUID uuid = entity.getUniqueId();
         return entityStats.get(uuid);
