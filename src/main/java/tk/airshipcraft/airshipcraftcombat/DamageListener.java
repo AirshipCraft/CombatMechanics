@@ -43,14 +43,41 @@ public class DamageListener implements Listener {
             }
         }
     };
+    public static class HealthRegenTask extends BukkitRunnable {
 
+        private final double healthRegenAmount;
+
+        public HealthRegenTask(double healthRegenAmount) {
+            this.healthRegenAmount = healthRegenAmount;
+        }
+
+        @Override
+        public void run() {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                PlayerStats playerStats = entityStats.get(player.getUniqueId());
+                LivingEntity livingEntity = player;
+                double health = playerStats.getHealth(player);
+                double maxHealth = playerStats.getMaxHealth(player);
+                if (health < maxHealth) {
+                    double newHealth = Math.min(health + healthRegenAmount, maxHealth);
+                    playerStats.setCustomHealth(newHealth, livingEntity);
+                }
+            }
+        }
+    }
+    public static double calculateHealthRegen(double maxHealth) {
+        double healthRegen = 5 + (0.02 * maxHealth);
+        return healthRegen;
+    }
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         PlayerStats stats = new PlayerStats(100, 10, 5, 2, 5, 1, 100);
         entityStats.put(player.getUniqueId(), stats);
         actionBarTask.runTaskTimer(Main.getPlugin(Main.class), 0L, 20L);
-        player.spigot().sendMessage(ChatMessageType.valueOf(ChatColor.GREEN + "[AirshipCraft] Your stats have successfully loaded!"));
+        double healthRegen = calculateHealthRegen(stats.getMaxHealth(player));
+        HealthRegenTask regenTask = new HealthRegenTask(healthRegen);
+        regenTask.runTaskTimer(Main.getPlugin(Main.class), 0L, 20L);
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 2.0f);
     }
     @EventHandler
@@ -92,11 +119,12 @@ public class DamageListener implements Listener {
             double damage = event.getDamage();
             LivingEntity victim = (LivingEntity) event.getEntity();
             UUID uuid = victim.getUniqueId();
+            double vanillaDamage = event.getDamage();
             event.setDamage(0.0);
             dealCustomDamage(damage, victim);
             showDamageIndicator(victim, damage);
             if (entityStats.get(uuid) == null) {
-                PlayerStats playerStats = new PlayerStats(100.0, 10.0, 0.2, 2.0, 5.0, 1.0, 100.0);
+                PlayerStats playerStats = new PlayerStats(100.0, 10.0, 0.2, 2.0, 5.0, vanillaDamage, 100.0);
                 entityStats.put(uuid, playerStats);
             }
         }
@@ -148,6 +176,7 @@ public class DamageListener implements Listener {
     }
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        double vanillaDamage = event.getDamage();
         event.setDamage(0.0);
         Entity damager = event.getDamager();
         if (!(damager instanceof LivingEntity)) {
@@ -161,20 +190,21 @@ public class DamageListener implements Listener {
         PlayerStats victimStats = entityStats.get(uuidVictim);
         PlayerStats attackerStats = null;
         if (entityStats.get(uuidVictim) == null) {
-            PlayerStats playerStats = new PlayerStats(100.0, 10.0, 0.2, 2.0, 5.0, 1.0, 100.0);
+            PlayerStats playerStats = new PlayerStats(100.0, 10.0, 0.2, 2.0, 5.0, vanillaDamage, 100.0);
             entityStats.put(uuidVictim, playerStats);
         }
 
         if (attacker instanceof Player) {
             attackerStats = entityStats.get(attacker.getUniqueId());
             Player playerAttacker = (Player) attacker;
+            attackerStats.setCustomBaseDamage(vanillaDamage, playerAttacker);
             ItemStack weapon = playerAttacker.getInventory().getItemInMainHand();
             ItemStack[] armor = playerAttacker.getInventory().getArmorContents();
 
             try {
                 double damage = calculateDamage(attackerStats, weapon, armor, victim);
-                dealCustomDamage(damage, victim);
-                showDamageIndicator(victim, damage);
+                dealCustomDamage(damage + vanillaDamage, victim);
+                showDamageIndicator(victim, damage + vanillaDamage);
             } catch (Exception e) {
 
             }
@@ -183,8 +213,8 @@ public class DamageListener implements Listener {
 
             try {
                 double damage = calculateDamage(attackerStats, null, null, victim);
-                dealCustomDamage(damage, victim);
-                showDamageIndicator(victim, damage);
+                dealCustomDamage(damage + vanillaDamage, victim);
+                showDamageIndicator(victim, damage + vanillaDamage);
             } catch (Exception e) {
 
             }
@@ -259,7 +289,9 @@ public class DamageListener implements Listener {
             damage *= critDamage;
         }
         double defense = stats.getDefense(entity);
-        damage = damage / defense;
+        if (!(defense == 0)) {
+            damage = damage / defense;
+        }
         return damage;
         }
 
